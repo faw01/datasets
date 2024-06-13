@@ -75,7 +75,7 @@ class How2Sign(tfds.core.GeneratorBasedBuilder):
 
         if self._builder_config.include_pose == "openpose":
             pose_header_path = _POSE_HEADERS[self._builder_config.include_pose]
-            stride = 1 if self._builder_config.fps is None else 24 / self._builder_config.fps
+            stride = 1 if self._builder_config.fps is None else 30 / self._builder_config.fps
             features["pose"] = {
                 "front": PoseFeature(shape=(None, 1, 137, 2), header_path=pose_header_path, stride=stride),
                 # "side": PoseFeature(shape=(None, 1, 137, 2), header_path=pose_header_path, stride=stride),
@@ -123,7 +123,7 @@ class How2Sign(tfds.core.GeneratorBasedBuilder):
         for _id in ids:
             datum = {
                 "id": _id,
-                "fps": 24,
+                "fps": 30,
             }
 
             if self.builder_config.include_video:
@@ -134,11 +134,11 @@ class How2Sign(tfds.core.GeneratorBasedBuilder):
 
             if self._builder_config.include_pose == "openpose":
                 front_path = path.join(bfh_2d_front, "openpose_output", "json", _id + "-rgb_front")
-                front_pose = load_openpose_directory(front_path, fps=24, width=1280, height=720)
+                front_pose = load_openpose_directory(front_path, fps=30, width=1280, height=720)
 
                 # TODO add side pose when available
                 # side_path = path.join(bfh_2d_side, 'openpose_output', 'json', _id + '-rgb_side')
-                # side_pose = load_openpose_directory(side_path, fps=24, width=1280, height=720)
+                # side_pose = load_openpose_directory(side_path, fps=30, width=1280, height=720)
 
                 datum["pose"] = {"front": front_pose}
 

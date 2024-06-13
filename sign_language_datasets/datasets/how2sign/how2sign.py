@@ -33,21 +33,21 @@ _SPLITS = {
         "rgb_clips_side": "https://drive.google.com/uc?export=download&id=1oiw861NGp4CKKFO3iuHGSCgTyQ-DXHW7",
         "bfh_2d_front": "https://drive.google.com/uc?export=download&id=1TBX7hLraMiiLucknM1mhblNVomO9-Y0r",
         "bfh_2d_side": None,
-        "translation": "https://drive.google.com/uc?export=download&id=1dUHSoefk9OxKJnHrHPX--I4tpm9QD0ok",
+        "translation": None,
     },
     tfds.Split.VALIDATION: {
         "rgb_clips_front": "https://drive.google.com/uc?export=download&id=1DhLH8tIBn9HsTzUJUfsEOGcP4l9EvOiO",
         "rgb_clips_side": "https://drive.google.com/uc?export=download&id=1mxL7kJPNUzJ6zoaqJyxF1Krnjo4F-eQG",
         "bfh_2d_front": "https://drive.google.com/uc?export=download&id=1JmEsU0GYUD5iVdefMOZpeWa_iYnmK_7w",
         "bfh_2d_side": None,
-        "translation": "https://drive.google.com/uc?export=download&id=1Vpag7VPfdTCCJSao8Pz14rlPfekRMggI",
+        "translation": None,
     },
     tfds.Split.TEST: {
         "rgb_clips_front": "https://drive.google.com/uc?export=download&id=1qTIXFsu8M55HrCiaGv7vZ7GkdB3ubjaG",
         "rgb_clips_side": "https://drive.google.com/uc?export=download&id=1j9v9P7UdMJ0_FVWg8H95cqx4DMSsrdbH",
         "bfh_2d_front": "https://drive.google.com/uc?export=download&id=1g8tzzW5BNPzHXlamuMQOvdwlHRa-29Vp",
         "bfh_2d_side": None,
-        "translation": "https://drive.google.com/uc?export=download&id=1AgwBZW26kFHS4CWNMQTCMPGkBPkH3qCu",
+        "translation": None,
     },
 }
 

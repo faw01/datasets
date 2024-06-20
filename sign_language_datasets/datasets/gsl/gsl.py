@@ -53,8 +53,8 @@ class GSL(tfds.core.GeneratorBasedBuilder):
                 "glosses": tfds.features.Sequence(tfds.features.Text()),
             },
             "instance": tf.int32,
-            "video": self._builder_config.video_feature((480, 848)),
-            "depth_video": self._builder_config.video_feature((480, 848), 1),
+            "video": self._builder_config.video_feature((848, 480)),
+            "depth_video": self._builder_config.video_feature((848, 480), 1),
         }
 
         return tfds.core.DatasetInfo(

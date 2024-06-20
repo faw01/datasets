@@ -1,3 +1,3 @@
-"""how2sign dataset."""
+"""gsl dataset."""
 
 from .gsl import GSL

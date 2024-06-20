@@ -4,8 +4,13 @@ import csv
 import os
 from os import path
 
+
 import tensorflow as tf
 import tensorflow_datasets as tfds
+
+from typing import Dict
+from tensorflow_datasets.core.download.checksums import UrlInfo
+from tensorflow_datasets.core import utils
 
 from ..warning import dataset_warning
 from ...datasets.config import SignDatasetConfig
@@ -85,7 +90,8 @@ class GSL(tfds.core.GeneratorBasedBuilder):
         depth_urls = [_DEPTH_URLS_TEMPLATE.format(name) for name in depth_names]
 
         download_urls = video_urls + depth_urls
-        downloaded_files = dl_manager.download_and_extract(download_urls)
+        url_infos = self._get_url_infos(download_urls)
+        downloaded_files = dl_manager.download_and_extract(url_infos)
 
         video_files = [file for file in downloaded_files if file.name in video_names]
         depth_files = [file for file in downloaded_files if file.name in depth_names]
@@ -94,6 +100,22 @@ class GSL(tfds.core.GeneratorBasedBuilder):
             split: self._generate_examples(split, video_files, depth_files, os.path.join(continuous_dir, f"{split}.csv"))
             for split in ["GSL-SD-train", "GSL-SD-val", "GSL-SD-test"]
         }
+
+    def _get_url_infos(self, urls: List[str]) -> Dict[str, UrlInfo]:
+        """Returns UrlInfo objects for each URL."""
+        with utils.try_with_retry(self._checksums_path.open, mode='r') as f:
+            url_infos = {}
+            for line in f:
+                cols = line.strip().split('\t')
+                if len(cols) == 3:
+                    url, checksum, _ = cols
+                    if url in urls:
+                        url_infos[url] = UrlInfo(
+                            size=None,  # Set size to None since we don't have the file size
+                            checksum=checksum,
+                            filename=None
+                        )
+        return url_infos
 
     def _generate_examples(self, split, video_paths, depth_paths, split_path):
         """Yields examples."""

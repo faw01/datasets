@@ -8,7 +8,7 @@ from os import path
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-from typing import Dict
+from typing import Dict, List
 from tensorflow_datasets.core.download.checksums import UrlInfo
 from tensorflow_datasets.core import utils
 
@@ -32,7 +32,9 @@ _CITATION = """
 """
 
 _VIDEOS_URLS_TEMPLATE = "https://zenodo.org/records/4756317/files/{}.zip?download=1"
-_DEPTH_URLS_TEMPLATE = "https://zenodo.org/records/4756317/files/{}_Depth.zip?download=1"
+_DEPTH_URLS_TEMPLATE = (
+    "https://zenodo.org/records/4756317/files/{}_Depth.zip?download=1"
+)
 
 
 class GSL(tfds.core.GeneratorBasedBuilder):
@@ -80,12 +82,18 @@ class GSL(tfds.core.GeneratorBasedBuilder):
         ]
 
         supplementary_files = dl_manager.download_and_extract(supplementary_urls)
-        split_dir = [file for file in supplementary_files if file.name == "GSL_split"][0]
+        split_dir = [file for file in supplementary_files if file.name == "GSL_split"][
+            0
+        ]
         continuous_dir = os.path.join(split_dir, "GSL_continuous")
 
-        video_names = [f"{prefix}{i}" for prefix in ["health", "kep", "police"] for i in range(1, 6)]
+        video_names = [
+            f"{prefix}{i}"
+            for prefix in ["health", "kep", "police"]
+            for i in range(1, 6)
+        ]
         depth_names = [f"{name}_Depth" for name in video_names]
-        
+
         video_urls = [_VIDEOS_URLS_TEMPLATE.format(name) for name in video_names]
         depth_urls = [_DEPTH_URLS_TEMPLATE.format(name) for name in depth_names]
 
@@ -97,23 +105,26 @@ class GSL(tfds.core.GeneratorBasedBuilder):
         depth_files = [file for file in downloaded_files if file.name in depth_names]
 
         return {
-            split: self._generate_examples(split, video_files, depth_files, os.path.join(continuous_dir, f"{split}.csv"))
+            split: self._generate_examples(
+                split,
+                video_files,
+                depth_files,
+                os.path.join(continuous_dir, f"{split}.csv"),
+            )
             for split in ["GSL-SD-train", "GSL-SD-val", "GSL-SD-test"]
         }
 
     def _get_url_infos(self, urls: List[str]) -> Dict[str, UrlInfo]:
         """Returns UrlInfo objects for each URL."""
-        with utils.try_with_retry(self._checksums_path.open, mode='r') as f:
+        with utils.try_with_retry(self._checksums_path.open, mode="r") as f:
             url_infos = {}
             for line in f:
-                cols = line.strip().split('\t')
+                cols = line.strip().split("\t")
                 if len(cols) == 3:
                     url, checksum, _ = cols
                     if url in urls:
                         url_infos[url] = UrlInfo(
-                            size=None,  # Set size to None since we don't have the file size
-                            checksum=checksum,
-                            filename=None
+                            size=None, checksum=checksum, filename=None
                         )
         return url_infos
 

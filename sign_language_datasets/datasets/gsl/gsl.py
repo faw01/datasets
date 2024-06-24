@@ -1,24 +1,13 @@
-"""GSL: The Greek Sign Language Dataset"""
+"""Greek Sign Language (GSL) Dataset"""
 
-import csv
 import os
-from os import path
-
-
-import tensorflow as tf
 import tensorflow_datasets as tfds
+from tensorflow.io.gfile import GFile
 
-from typing import Dict, List
-from tensorflow_datasets.core.download.checksums import UrlInfo
-from tensorflow_datasets.core import utils
-
-from ..warning import dataset_warning
-from ...datasets.config import SignDatasetConfig
+from sign_language_datasets.datasets.warning import dataset_warning
 
 _DESCRIPTION = """
-The Greek Sign Language (GSL) is a large-scale RGB+D dataset, suitable for Sign Language Recognition (SLR) and Sign Language Translation (SLT). The video captures are conducted using an Intel RealSense D435 RGB+D camera at a rate of 30 fps. Both the RGB and the depth streams are acquired in the same spatial resolution of 848x480 pixels.
-
-The dataset contains 10,290 sentence instances, 40,785 gloss instances, 310 unique glosses (vocabulary size) and 331 unique sentences, with 4.23 glosses per sentence on average. Each signer is asked to perform the pre-deﬁned dialogues ﬁve consecutive times.
+The Greek Sign Language (GSL) is a large-scale RGB+D dataset, suitable for Sign Language Recognition (SLR) and Sign Language Translation (SLT).
 """
 
 _CITATION = """
@@ -31,43 +20,25 @@ _CITATION = """
 }
 """
 
-_VIDEOS_URLS_TEMPLATE = "https://zenodo.org/records/4756317/files/{}.zip?download=1"
-_DEPTH_URLS_TEMPLATE = (
-    "https://zenodo.org/records/4756317/files/{}_Depth.zip?download=1"
-)
-
-
 class GSL(tfds.core.GeneratorBasedBuilder):
     """DatasetBuilder for GSL dataset."""
 
     VERSION = tfds.core.Version("2.0.0")
     RELEASE_NOTES = {
-        "2.0.0": "v2 public release",
+        "2.0.0": "Initial release.",
     }
-
-    BUILDER_CONFIGS = [
-        SignDatasetConfig(name="default", include_video=True),
-    ]
 
     def _info(self) -> tfds.core.DatasetInfo:
         """Returns the dataset metadata."""
-        features = {
-            "id": tfds.features.Text(),
-            "signer": tfds.features.Text(),
-            "sentence": {
-                "id": tfds.features.Text(),
-                "text": tfds.features.Text(),
-                "glosses": tfds.features.Sequence(tfds.features.Text()),
-            },
-            "instance": tf.int32,
-            "video": self._builder_config.video_feature((848, 480)),
-            "depth_video": self._builder_config.video_feature((848, 480), 1),
-        }
-
         return tfds.core.DatasetInfo(
             builder=self,
             description=_DESCRIPTION,
-            features=tfds.features.FeaturesDict(features),
+            features=tfds.features.FeaturesDict({
+                "id": tfds.features.Text(),
+                "gloss": tfds.features.Text(),
+                "video_path": tfds.features.Text(),
+                "depth_path": tfds.features.Text(),
+            }),
             homepage="https://vcl.iti.gr/dataset/gsl/",
             citation=_CITATION,
         )
@@ -76,90 +47,35 @@ class GSL(tfds.core.GeneratorBasedBuilder):
         """Returns SplitGenerators."""
         dataset_warning(self)
 
-        supplementary_urls = [
-            "https://zenodo.org/records/4756317/files/supplementary.zip?download=1",
-            "https://zenodo.org/records/4756317/files/GSL_split.zip?download=1",
-        ]
+        data_dir = os.path.join(os.path.dirname(__file__), "data")
+        gsl_dir = os.path.join(data_dir, "gsl")
+        split_dir = os.path.join(data_dir, "GSL_split", "GSL_continuous")
 
-        supplementary_files = dl_manager.download_and_extract(supplementary_urls)
-        split_dir = [file for file in supplementary_files if file.name == "GSL_split"][
-            0
-        ]
-        continuous_dir = os.path.join(split_dir, "GSL_continuous")
-
-        video_names = [
-            f"{prefix}{i}"
-            for prefix in ["health", "kep", "police"]
-            for i in range(1, 6)
-        ]
-        depth_names = [f"{name}_Depth" for name in video_names]
-
-        video_urls = [_VIDEOS_URLS_TEMPLATE.format(name) for name in video_names]
-        depth_urls = [_DEPTH_URLS_TEMPLATE.format(name) for name in depth_names]
-
-        download_urls = video_urls + depth_urls
-        url_infos = self._get_url_infos(download_urls)
-        downloaded_files = dl_manager.download_and_extract(url_infos)
-
-        video_files = [file for file in downloaded_files if file.name in video_names]
-        depth_files = [file for file in downloaded_files if file.name in depth_names]
+        zip_files = [f for f in os.listdir(gsl_dir) if f.endswith('.zip')]
+        
+        file_dict = {f: os.path.join(gsl_dir, f) for f in zip_files}
+        
+        downloaded_files = dl_manager.download(file_dict)
 
         return {
-            split: self._generate_examples(
-                split,
-                video_files,
-                depth_files,
-                os.path.join(continuous_dir, f"{split}.csv"),
-            )
-            for split in ["GSL-SD-train", "GSL-SD-val", "GSL-SD-test"]
+            "train": self._generate_examples(os.path.join(split_dir, "GSL-SD-train.txt"), downloaded_files),
+            "validation": self._generate_examples(os.path.join(split_dir, "GSL-SD-val.txt"), downloaded_files),
+            "test": self._generate_examples(os.path.join(split_dir, "GSL-SD-test.txt"), downloaded_files),
         }
 
-    def _get_url_infos(self, urls: List[str]) -> Dict[str, UrlInfo]:
-        """Returns UrlInfo objects for each URL."""
-        with utils.try_with_retry(self._checksums_path.open, mode="r") as f:
-            url_infos = {}
-            for line in f:
-                cols = line.strip().split("\t")
-                if len(cols) == 3:
-                    url, checksum, _ = cols
-                    if url in urls:
-                        url_infos[url] = UrlInfo(
-                            size=None, checksum=checksum, filename=None
-                        )
-        return url_infos
-
-    def _generate_examples(self, split, video_paths, depth_paths, split_path):
+    def _generate_examples(self, split_file: str, downloaded_files: dict):
         """Yields examples."""
-        with open(split_path, encoding="utf-8") as f:
-            split_data = list(csv.DictReader(f))
+        with GFile(split_file, "r") as f:
+            for i, line in enumerate(f):
+                video_id, gloss = line.strip().split("|")
+                scenario = video_id.split("_")[0]
 
-        for row in split_data:
-            video_id = row["video_id"]
-            video_filename = f"{video_id}.mp4"
-            depth_filename = f"{video_id}.mp4"
+                video_file = f"{scenario}.zip"
+                depth_file = f"{scenario}_Depth.zip"
 
-            video_path = [
-                path
-                for paths in video_paths
-                for path in paths.iterdir()
-                if path.name == video_filename
-            ][0]
-            depth_path = [
-                path
-                for paths in depth_paths
-                for path in paths.iterdir()
-                if path.name == depth_filename
-            ][0]
-
-            yield video_id, {
-                "id": video_id,
-                "signer": row["signer"],
-                "sentence": {
-                    "id": row["sentence"],
-                    "text": row["translation"],
-                    "glosses": row["annotation"].split(),
-                },
-                "instance": int(row["instance"]),
-                "video": video_path,
-                "depth_video": depth_path,
-            }
+                yield i, {
+                    "id": video_id,
+                    "gloss": gloss,
+                    "video_path": str(downloaded_files[video_file]),
+                    "depth_path": str(downloaded_files[depth_file]),
+                }
